@@ -1,41 +1,22 @@
-{{- $fullName := include "generic.fullname" . -}}
-{{- if and .Values.cron .Values.cron.enabled }}
-{{- $cronImage := "" -}}
-{{- $cronTag := "" -}}
-{{- $cronPullPolicy := "" -}}
-{{- $cronCommand := "" -}}
-{{- $cronVaultEnvPath := "" -}}
-{{- if .Values.cron.image -}}
-  {{- $cronImage = .Values.cron.image.repository | default .Values.image.repository -}}
-  {{- $cronTag = .Values.cron.image.tag | default .Values.image.tag | default .Chart.AppVersion -}}
-  {{- $cronPullPolicy = .Values.cron.image.pullPolicy | default .Values.image.pullPolicy -}}
-  {{- $cronCommand = .Values.cron.image.customCommand | default .Values.image.customCommand -}}
-  {{- $cronVaultEnvPath = .Values.cron.image.vaultEnvPath | default .Values.image.vaultEnvPath -}}
-{{- else -}}
-  {{- $cronImage = .Values.image.repository -}}
-  {{- $cronTag = .Values.image.tag | default .Chart.AppVersion -}}
-  {{- $cronPullPolicy = .Values.image.pullPolicy -}}
-  {{- $cronCommand = .Values.image.customCommand -}}
-  {{- $cronVaultEnvPath = .Values.image.vaultEnvPath -}}
-{{- end -}}
+{{- if .Values.cron.enabled }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "generic.fullname" . }}-cron
+  name: {{ include "generic.fullname" . }}
   labels:
-    app: {{ include "generic.fullname" . }}-cron
+    app: {{ include "generic.fullname" . }}
 spec:
   schedule: {{ .Values.cron.schedule | quote }}
-  {{- if and .Values.cron .Values.cron.concurrencyPolicy }}
+  {{- if .Values.cron.concurrencyPolicy }}
   concurrencyPolicy: {{ .Values.cron.concurrencyPolicy }}
   {{- end }}
-  {{- if and .Values.cron .Values.cron.failedJobsHistoryLimit }}
+  {{- if .Values.cron.failedJobsHistoryLimit }}
   failedJobsHistoryLimit: {{ .Values.cron.failedJobsHistoryLimit }}
   {{- end }}
-  {{- if and .Values.cron .Values.cron.successfulJobsHistoryLimit }}
+  {{- if .Values.cron.successfulJobsHistoryLimit }}
   successfulJobsHistoryLimit: {{ .Values.cron.successfulJobsHistoryLimit }}
   {{- end }}
-  {{- if and .Values.cron .Values.cron.startingDeadlineSeconds }}
+  {{- if .Values.cron.startingDeadlineSeconds }}
   startingDeadlineSeconds: {{ .Values.cron.startingDeadlineSeconds }}
   {{- end }}
   jobTemplate:
@@ -47,7 +28,7 @@ spec:
             {{- toYaml . | nindent 12 }}
         {{- end }}
           labels:
-            app: {{ include "generic.fullname" . }}-cron
+            app: {{ include "generic.fullname" . }}
         spec:
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
@@ -56,21 +37,16 @@ spec:
           serviceAccountName: {{ include "generic.serviceAccountName" . }}
           securityContext:
             {{- toYaml .Values.podSecurityContext | nindent 12 }}
-          restartPolicy: {{ if and .Values.cron .Values.cron.restartPolicy }}{{ .Values.cron.restartPolicy }}{{ else }}"OnFailure"{{ end }}
+          restartPolicy: {{ if .Values.cron.restartPolicy }}{{ .Values.cron.restartPolicy }}{{ else }}"OnFailure"{{ end }}
           containers:
-            - name: {{ include "generic.fullname" . }}-cron
+            - name: {{ include "generic.fullname" . }}
               securityContext:
                 {{- toYaml .Values.securityContext | nindent 16 }}
-              image: "{{ $cronImage }}:{{ $cronTag }}"
-              imagePullPolicy: {{ $cronPullPolicy }}
-              {{- if $cronCommand }}
+              image: "908052927744.dkr.ecr.ap-southeast-1.amazonaws.com/bridge-reporting/{{ $.Values.fullnameOverride }}:{{ $.Values.version }}"
+              imagePullPolicy: {{ .Values.imagePullPolicy | default "IfNotPresent" }}
+              {{- if .Values.customCommand }}
               command:
-                {{- toYaml $cronCommand | nindent 16 }}  
-              {{- else if $cronVaultEnvPath }}
-              command:
-                - sh
-                - -c
-                - source {{ $cronVaultEnvPath }} && /usr/bin/supervisord -s -n -c /etc/supervisor/conf.d/supervisord.conf
+                {{- toYaml .Values.customCommand | nindent 16 }}
               {{- end }}
 {{- if .Values.volumes.existingSecret }}
               volumeMounts:
@@ -85,33 +61,29 @@ spec:
                       fieldPath: metadata.namespace
 {{- range $name, $value := .Values.env.open }}
 {{- if not (empty $value) }}
-                - name: {{ $name | quote }}
-                  value: {{ $value | quote }}
+                - name: {{ $name }}
+                  value: {{ $value }}
 {{- end }}
 {{- end }}
-{{- if and .Values.cron .Values.cron.env .Values.cron.env.open }}
-{{- range $name, $value := .Values.cron.env.open }}
+{{- if .Values.env.open }}
+{{- range $name, $value := .Values.env.open }}
 {{- if not (empty $value) }}
-                - name: {{ $name | quote }}
-                  value: {{ $value | quote }}
+                - name: {{ $name }}
+                  value: {{ $value }}
 {{- end }}
 {{- end }}
 {{- end }}
 {{- range $name, $value := .Values.env.field }}
 {{- if not ( empty $value) }}
-                - name: {{ $name | quote }}
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: {{ $value | quote }}
+                - name: {{ $name }}
+                  value: {{ $value }}
 {{- end }}
 {{- end }}
-{{- if and .Values.cron .Values.cron.env .Values.cron.env.field }}
-{{- range $name, $value := .Values.cron.env.field }}
+{{- if .Values.env.field }}
+{{- range $name, $value := .Values.env.field }}
 {{- if not ( empty $value) }}
-                - name: {{ $name | quote }}
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: {{ $value | quote }}
+                - name: {{ $name }}
+                  value: {{ $value }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -124,8 +96,8 @@ spec:
                 {{- end }}
               {{- end }}
               resources:
-                {{- if and .Values.cron .Values.cron.resources }}
-                {{- toYaml .Values.cron.resources | nindent 16 }}
+                {{- if .Values.resources }}
+                {{- toYaml .Values.resources | nindent 16 }}
                 {{- else }}
                 {{- toYaml .Values.resources | nindent 16 }}
                 {{- end }}

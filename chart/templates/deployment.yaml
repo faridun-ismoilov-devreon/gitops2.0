@@ -1,4 +1,5 @@
 {{- $fullName := include "generic.fullname" . -}}
+{{- if not .Values.cron.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,57 +28,38 @@ spec:
       serviceAccountName: {{ include "generic.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if and .Values.initContainers .Values.initContainers.enabled }}
-      initContainers:
-        {{- range .Values.initContainers.containers }}
-        - name: {{ .name }}
+      {{- if and .Values.initContainer.enabled }}
+      initContainer:
+        - name: migrations
           securityContext:
             {{- toYaml $.Values.securityContext | nindent 12 }}
-          image: "{{ .image.repository }}:{{ .image.tag | default $.Values.image.tag | default $.Chart.AppVersion }}"
-          imagePullPolicy: {{ .image.pullPolicy | default $.Values.image.pullPolicy }}
-          {{- if .image.customCommand }}
+          image: "908052927744.dkr.ecr.ap-southeast-1.amazonaws.com/bridge-reporting/{{ $.Values.fullnameOverride | replace "host" "deploy" }}:{{ $.Values.version }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy | default "IfNotPresent" }}
+          {{- if .Values.initContainer.customCommand }}
           command:
-            {{- toYaml .image.customCommand | nindent 12 }}  
+            {{- toYaml .Values.initContainer.customCommand | nindent 12 }}  
           {{- end }}
           env:
             - name: K8S_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-          {{- if .env.open }}
-          {{- range $name, $value := .env.open }}
-          {{- if not (empty $value) }}
-            - name: {{ $name | quote }}
-              value: {{ $value | quote }}
-          {{- end }}
-          {{- end }}
-          {{- end }}
-          {{- if .env.field }}
-          {{- range $name, $value := .env.field }}
+          {{- range $name, $value := .Values.env.open }}
           {{- if not ( empty $value) }}
-            - name: {{ $name | quote }}
-              valueFrom:
-                fieldRef:
-                  fieldPath: {{ $value | quote }}
+            - name: {{ $name }}
+              value: {{ $value }}
           {{- end }}
           {{- end }}
-          {{- end }}
-        {{- end }}
       {{- end }}
       containers:
         - name: {{ include "generic.fullname" . }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- if .Values.image.customCommand }}
+          image: "908052927744.dkr.ecr.ap-southeast-1.amazonaws.com/bridge-reporting/{{ $.Values.fullnameOverride }}:{{ $.Values.version }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy | default "IfNotPresent" }}
+          {{- if .Values.customCommand }}
           command:
-            {{- toYaml .Values.image.customCommand | nindent 12 }}  
-          {{- else if .Values.image.vaultEnvPath }}
-          command:
-            - sh
-            - -c
-            - source {{ .Values.image.vaultEnvPath }} && /usr/bin/supervisord -s -n -c /etc/supervisor/conf.d/supervisord.conf
+            {{- toYaml .Values.customCommand | nindent 12 }}  
           {{- end }}
 {{- if .Values.volumes.existingSecret }}
           volumeMounts:
@@ -152,3 +134,4 @@ spec:
                   operator: In
                   values:
                   - {{ .Release.Name }}
+{{end}}

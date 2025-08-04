@@ -1,0 +1,32 @@
+env:
+  open:
+    test: "test"
+    ConnectionStrings__Database: "User ID=bridge-reporting-dev;Password=dwadaw2211daw;Host=192.168.150.121;Port=5432;Database=bridge-reporting-viktar;Pooling=true"
+    Kestrel__Endpoints__Rest__Url: "http://+:8080"
+    Rpc__Auth__Address: "http://devreon-auth-host.viktar:5036"
+    TokensValidation__IssuerUrl: "https://auth.viktar.devreon.dev/api"
+    ASPNETCORE_ENVIRONMENT: "Development"
+
+fullnameOverride: "devreon-bridge-reporting-host"
+
+initContainer:
+  enabled: true
+
+version: "2025-07-29-12.05-fix-cors"
+
+ingress:
+  enabled: true
+  hosts:
+    - host: bridge-reporting.viktar.devreon.dev
+  paths:
+    - path: /api
+      pathType: Prefix
+    - path: /swagger
+      pathType: Prefix
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-dns
+    cert-manager.io/private-key-algorithm: ECDSA
+  tls:
+    - secretName: bridge-reporting-viktar-tls
+      hosts:
+        - bridge-reporting.viktar.devreon.dev

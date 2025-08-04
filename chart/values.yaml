@@ -2,45 +2,22 @@ env:
   open:
     test: "test"
 
-fullnameOverride: "generic-service"
+fullnameOverride: "devreon-bridge-reporting-host"
 replicaCount: 1
 
-initContainers:
+initContainer:
   enabled: true
-  containers:
-    - name: migrations
-      image:
-        repository: 908052927744.dkr.ecr.ap-southeast-1.amazonaws.com/bridge-reporting/devreon-bridge-reporting-deploy
-        pullPolicy: IfNotPresent
-      env:
-        open:
-          ConnectionStrings__Database: "User ID=bridge-reporting-dev;Password=dwadaw2211daw;Host=192.168.150.121;Port=5432;Database=bridge-reporting-viktar;Pooling=true"
 
-image:
-  repository: 908052927744.dkr.ecr.ap-southeast-1.amazonaws.com/bridge-reporting/devreon-bridge-reporting-host
-  tag: "2025-07-29-12.05-fix-cors"
-  pullPolicy: IfNotPresent
+cron:
+  enabled: true
+
+version: "2025-07-29-12.05-fix-cors"
 
 imagePullSecrets:
   - name: ecr-registry-secret
 
-
 ingress:
-  enabled: true
-  hosts:
-    - host: bridge-reporting.viktar.devreon.dev
-  paths:
-    - path: /api
-      pathType: Prefix
-    - path: /swagger
-      pathType: Prefix
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-dns
-    cert-manager.io/private-key-algorithm: ECDSA
-  tls:
-    - secretName: bridge-reporting-viktar-tls
-      hosts:
-        - bridge-reporting.viktar.devreon.dev
+  enabled: false
 
 route:
   enabled: false
@@ -54,7 +31,6 @@ resources:
     memory: 128Mi
 
 service:
-  servicename: "devreon-bridge-reporting-host"
   type: ClusterIP
   ports:
     - name: http
