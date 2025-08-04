@@ -17,7 +17,7 @@ version: "2025-07-29-12.05-fix-cors"
 ingress:
   enabled: true
   hosts:
-    - host: bridge-reporting.viktar.devreon.dev
+    - host: bridge-reporting.devreon.dev
   paths:
     - path: /api
       pathType: Prefix
@@ -27,6 +27,6 @@ ingress:
     cert-manager.io/cluster-issuer: letsencrypt-dns
     cert-manager.io/private-key-algorithm: ECDSA
   tls:
-    - secretName: bridge-reporting-viktar-tls
+    - secretName: bridge-reporting-devreon-tls
       hosts:
-        - bridge-reporting.viktar.devreon.dev
+        - bridge-reporting.devreon.dev
