@@ -8,25 +8,25 @@ spec:
   - git:
       repoURL: git@github.com:faridun-ismoilov-devreon/gitops2.0.git
       revision: HEAD
-      directories:
+      files:
       - path: deployments/**/*.yaml
   template:
     metadata:
-      name: '{{path.basename}}'
+      name: '{{path.basenameNormalized}}'
       namespace: argocd
     spec:
       project: default
       source:
         repoURL: git@github.com:faridun-ismoilov-devreon/gitops2.0.git
         targetRevision: HEAD
-        path: charts
+        path: chart
         helm:
           valueFiles:
           - values.yaml
-          - ../../{{path}}/values.yaml
+          - ../{{path}}
       destination:
         server: https://kubernetes.default.svc
-        namespace: '{{path.basename}}'
+        namespace: '{{path.basenameNormalized}}'
       syncPolicy:
         automated:
           prune: true
