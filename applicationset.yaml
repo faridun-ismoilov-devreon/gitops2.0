@@ -19,7 +19,7 @@ spec:
       source:
         repoURL: git@github.com:faridun-ismoilov-devreon/gitops2.0.git
         targetRevision: HEAD
-        path: charts/devreon-service
+        path: charts
         helm:
           valueFiles:
           - values.yaml
