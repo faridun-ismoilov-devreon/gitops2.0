@@ -14,7 +14,7 @@ spec:
       - path: "deployments/*/*.yaml"
   template:
     metadata:
-      name: '{{.path.basename}}-{{.path.filenameNormalized}}'
+      name: '{{.path.basename}}-{{.path.filename | trimSuffix ".yaml"}}'
       namespace: argocd
     spec:
       project: default
