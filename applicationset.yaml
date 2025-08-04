@@ -12,7 +12,7 @@ spec:
       - path: "deployments/*/*.yaml"
   template:
     metadata:
-      name: '{{base path.dirname}}-{{path.basenameNormalized}}'
+      name: '{{path.dirname | base}}-{{path.basenameNormalized}}'
       namespace: argocd
     spec:
       project: default
@@ -26,7 +26,7 @@ spec:
           - ../{{path.path}}
       destination:
         server: https://kubernetes.default.svc
-        namespace: '{{base path.dirname}}'
+        namespace: '{{path.dirname | base}}'
       syncPolicy:
         automated:
           prune: true
