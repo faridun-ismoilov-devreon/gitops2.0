@@ -6,10 +6,10 @@ fullnameOverride: "devreon-bridge-reporting-host"
 replicaCount: 1
 
 initContainer:
-  enabled: true
+  enabled: false
 
 cron:
-  enabled: true
+  enabled: false
 
 version: "2025-07-29-12.05-fix-cors"
 
