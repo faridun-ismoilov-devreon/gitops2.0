@@ -1,0 +1,154 @@
+{{- $fullName := include "generic.fullname" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "generic.fullname" . }}
+  labels:
+    app: {{ include "generic.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: {{ include "generic.fullname" . }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        app: {{ include "generic.fullname" . }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "generic.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.initContainers .Values.initContainers.enabled }}
+      initContainers:
+        {{- range .Values.initContainers.containers }}
+        - name: {{ .name }}
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: "{{ .image.repository }}:{{ .image.tag | default $.Values.image.tag | default $.Chart.AppVersion }}"
+          imagePullPolicy: {{ .image.pullPolicy | default $.Values.image.pullPolicy }}
+          {{- if .image.customCommand }}
+          command:
+            {{- toYaml .image.customCommand | nindent 12 }}  
+          {{- end }}
+          env:
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          {{- if .env.open }}
+          {{- range $name, $value := .env.open }}
+          {{- if not (empty $value) }}
+            - name: {{ $name | quote }}
+              value: {{ $value | quote }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          {{- if .env.field }}
+          {{- range $name, $value := .env.field }}
+          {{- if not ( empty $value) }}
+            - name: {{ $name | quote }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: {{ $value | quote }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ include "generic.fullname" . }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.image.customCommand }}
+          command:
+            {{- toYaml .Values.image.customCommand | nindent 12 }}  
+          {{- else if .Values.image.vaultEnvPath }}
+          command:
+            - sh
+            - -c
+            - source {{ .Values.image.vaultEnvPath }} && /usr/bin/supervisord -s -n -c /etc/supervisor/conf.d/supervisord.conf
+          {{- end }}
+{{- if .Values.volumes.existingSecret }}
+          volumeMounts:
+            - mountPath: {{ .Values.volumes.mountPath | quote }}
+              name: {{ .Values.volumes.existingSecret | quote }}
+              readOnly: true
+{{- end }}
+          env:
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+{{- range $name, $value := .Values.env.open }}
+{{- if not (empty $value) }}
+            - name: {{ $name | quote }}
+              value: {{ $value | quote }}
+{{- end }}
+{{- end }}
+{{- range $name, $value := .Values.env.field }}
+{{- if not ( empty $value) }}
+            - name: {{ $name | quote }}
+              valueFrom:
+                fieldRef:
+                  fieldPath: {{ $value | quote }}
+{{- end }}
+{{- end }}
+          {{- if .Values.pvc.enabled }}
+          volumeMounts:
+            {{- range .Values.pvc.items }}
+            - name: {{ .name }} 
+              mountPath: "{{ .mountPath }}"
+              readOnly: {{ .readOnly | default false }}
+            {{- end }}
+          {{- end }}
+          ports:
+{{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: TCP
+{{- end }}
+          livenessProbe:
+{{ toYaml .Values.probes.liveness | indent 12 }}
+          readinessProbe:
+{{ toYaml .Values.probes.readiness | indent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.pvc.enabled }}
+      volumes:
+      {{- range .Values.pvc.items }}
+        - name: {{ .name }}
+          persistentVolumeClaim:
+            claimName: {{ .name }}
+      {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/instance
+                  operator: In
+                  values:
+                  - {{ .Release.Name }}

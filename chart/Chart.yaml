@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 9.9.9
+description: auth Helm Chart
+name: auth
+type: application
+version: 9.9.9

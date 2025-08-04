@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: devreon-services
+  namespace: argocd
+spec:
+  generators:
+  - git:
+      repoURL: git@github.com:faridun-ismoilov-devreon/gitops2.0.git
+      revision: HEAD
+      directories:
+      - path: deployments/**/*.yaml
+  template:
+    metadata:
+      name: '{{path.basename}}'
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: git@github.com:faridun-ismoilov-devreon/gitops2.0.git
+        targetRevision: HEAD
+        path: charts/devreon-service
+        helm:
+          valueFiles:
+          - values.yaml
+          - ../../{{path}}/values.yaml
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true

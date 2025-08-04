@@ -1,0 +1,56 @@
+{{- $fullName := include "generic.fullname" . -}}
+{{- $annotations := .Values.route.annotations }}
+{{- $generic_lables :=  include "generic.labels" . -}}
+{{- if .Values.route.enabled -}}
+{{- if .Values.route.host }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $fullName }}-route
+  labels:
+    {{- $generic_lables | nindent 4 }}
+  {{- with $annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+#spec:  
+spec:
+  host: {{ .Values.route.host }}
+  to:
+    kind: Service
+    name: {{ $fullName }}
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None
+{{- else}}
+{{- range  $i, $host := .Values.route.hosts }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $fullName }}-route-{{ $i }}
+  labels:
+    {{-  $generic_lables | nindent 4 }}
+  {{- with $annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+#spec:  
+spec:
+  host: {{  $host.host }}
+  to:
+    kind: Service
+    name: {{ $fullName }}
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,95 @@
+env:
+  open:
+    test: "test"
+
+fullnameOverride: "generic-service"
+replicaCount: 1
+
+initContainers:
+  enabled: true
+  containers:
+    - name: migrations
+      image:
+        repository: 908052927744.dkr.ecr.ap-southeast-1.amazonaws.com/bridge-reporting/devreon-bridge-reporting-deploy
+        pullPolicy: IfNotPresent
+      env:
+        open:
+          ConnectionStrings__Database: "User ID=bridge-reporting-dev;Password=dwadaw2211daw;Host=192.168.150.121;Port=5432;Database=bridge-reporting-viktar;Pooling=true"
+
+image:
+  repository: 908052927744.dkr.ecr.ap-southeast-1.amazonaws.com/bridge-reporting/devreon-bridge-reporting-host
+  tag: "2025-07-29-12.05-fix-cors"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ecr-registry-secret
+
+
+ingress:
+  enabled: true
+  hosts:
+    - host: bridge-reporting.viktar.devreon.dev
+  paths:
+    - path: /api
+      pathType: Prefix
+    - path: /swagger
+      pathType: Prefix
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-dns
+    cert-manager.io/private-key-algorithm: ECDSA
+  tls:
+    - secretName: bridge-reporting-viktar-tls
+      hosts:
+        - bridge-reporting.viktar.devreon.dev
+
+route:
+  enabled: false
+
+resources: 
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+service:
+  servicename: "devreon-bridge-reporting-host"
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      containerPort: 8080
+    - name: grpc
+      port: 5037
+      containerPort: 5037
+  
+rbac:
+  create: true
+  rolename: system:openshift:scc:nonroot  
+
+probes:
+  enabled: false
+
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+podSecurityContext:
+  fsGroup: 65534
+
+securityContext:
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 65534
+  # capabilities:
+  #   drop:
+  #   - ALL
+
+volumes:
+  existingSecret:
+  # mountPath: /secrets
+
+pvc:
+  enabled: false
